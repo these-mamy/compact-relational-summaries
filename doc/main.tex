@@ -1,0 +1,457 @@
+\documentclass[10pt]{article}
+
+\usepackage[a4paper,left=25mm,right=25mm,top=22mm,bottom=22mm,headheight=14pt,headsep=7mm,footskip=11mm]{geometry}
+\usepackage{fontspec}
+\usepackage{mathtools}
+\usepackage{unicode-math}
+\setmainfont{Latin Modern Roman}
+\setsansfont{Latin Modern Sans}
+\setmathfont{Latin Modern Math}
+
+\usepackage{xcolor}
+\definecolor{proofred}{HTML}{7A1825}
+\definecolor{proofgray}{HTML}{F4F3F3}
+\definecolor{muted}{HTML}{666666}
+\usepackage{microtype}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage[most]{tcolorbox}
+\usepackage{hyperref}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=proofred,
+  urlcolor=proofred,
+  pdftitle={Semantic Specifications and Sound Constructions for Summary Reuse},
+  pdfsubject={Chapter 5 compact proof note},
+  pdfauthor={Mamy}
+}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.34em}
+\emergencystretch=1.2em
+\setlist[itemize]{leftmargin=1.45em,itemsep=0.2em,topsep=0.2em}
+
+\titleformat{\section}
+  {\sffamily\bfseries\color{proofred}\fontsize{14}{17}\selectfont}
+  {\thesection}{0.55em}{}
+\titlespacing*{\section}{0pt}{1.0em}{0.4em}
+\titleformat{\subsection}
+  {\sffamily\bfseries\color{proofred}\fontsize{11.5}{14}\selectfont}
+  {\thesubsection}{0.5em}{}
+\titlespacing*{\subsection}{0pt}{0.72em}{0.22em}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\sffamily\small Compact relational summaries}
+\fancyhead[R]{\sffamily\small Specifications and constructions}
+\fancyfoot[C]{\small\thepage}
+\renewcommand{\headrulewidth}{0.35pt}
+\renewcommand{\footrulewidth}{0pt}
+
+\newtcolorbox{statementbox}[1][]{
+  enhanced,
+  breakable,
+  colback=proofgray,
+  colframe=proofred,
+  boxrule=0pt,
+  leftrule=2.5pt,
+  arc=1.2pt,
+  left=8pt,right=8pt,top=6pt,bottom=6pt,
+  before skip=0.4em,after skip=0.45em,
+  #1
+}
+
+\newcommand{\boxheading}[1]{\textbf{#1}\quad}
+\newcommand{\Field}{\mathsf{Field}}
+\newcommand{\State}{\mathsf{State}}
+\newcommand{\Semantics}[1]{\mathcal S\mathopen{⟦}#1\mathclose{⟧}}
+\newcommand{\CollectingSemantics}[1]{\widehat{\mathcal S}\mathopen{⟦}#1\mathclose{⟧}}
+\newcommand{\AbstractSemantics}[1]{\mathcal S^\sharp\mathopen{⟦}#1\mathclose{⟧}}
+\newcommand{\ProjClose}{\mathsf{ProjClose}}
+\newcommand{\filter}{\mathsf{filter}}
+\newcommand{\relate}{\mathsf{relate}}
+\newcommand{\reuse}{\mathsf{reuse}}
+\newcommand{\Lookup}{\mathsf{Lookup}}
+\newcommand{\SemanticExpand}{\mathsf{SemanticExpand}}
+\newcommand{\SoundFilter}{\mathsf{SoundFilter}}
+\newcommand{\ExactFilter}{\mathsf{ExactFilter}}
+\newcommand{\SoundReuse}{\mathsf{SoundReuse}}
+\newcommand{\agree}[1]{\mathrel{\equiv_{#1}}}
+\newcommand{\qedbox}{\hfill\raisebox{0.15ex}{\fboxsep=0pt\fbox{\rule{0pt}{0.55em}\rule{0.55em}{0pt}}}}
+
+\begin{document}
+
+{\sffamily\bfseries\color{proofred}\fontsize{10.5}{13}\selectfont CHAPTER 5 COMPACT PROPOSITION\par}
+\vspace{4mm}
+{\sffamily\bfseries\fontsize{23}{27}\selectfont
+Semantic Specifications and\\
+Sound Constructions for Summary Reuse\par}
+\vspace{4mm}
+{\color{muted}\large Replay sets, exact filtering, and frame-preserving reuse\par}
+\vspace{4mm}
+{\color{proofred}\rule{\textwidth}{1pt}\par}
+
+\section{Setting and terminology}
+
+Fix a statement or function body \(s\). Let \(\Field\) be the set of fields,
+\(\State\) the set of concrete states, \(\mathbb D^\sharp\) an abstract domain, and
+\[
+  \gamma:\mathbb D^\sharp\to\mathcal P(\State)
+\]
+its concretization. The concrete and collecting semantics of \(s\) have types
+\[
+  \Semantics{s}\subseteq\State\times\State,
+  \qquad
+  \CollectingSemantics{s}:\mathcal P(\State)\to\mathcal P(\State),
+\]
+where
+\[
+  \CollectingSemantics{s}(X)
+  =\{O\in\State\mid \exists I\in X,\ (I,O)\in\Semantics{s}\}.
+\]
+
+The \emph{producer} analyzes \(s\) from an abstract input \(I^\sharp\), computes an abstract
+output \(O^\sharp\), and stores a \emph{summary}, namely a cache entry
+\[
+  c=(A,W,I_c^\sharp,O_c^\sharp),
+\]
+where \(A\) is the \emph{replay set}, \(W\) is a sound write set, and
+\(I_c^\sharp,O_c^\sharp\) are the stored input and output. The \emph{consumer} is a later
+analysis of the same \(s\) from a current abstract input \(J^\sharp\).
+\emph{Lookup}, or \emph{matching}, tests whether this consumer input is compatible with the
+stored input on \(A\). A successful \emph{replay} (synonym: \emph{reuse}) replaces analysis of
+\(s\) at the consumer with the summary result. \emph{Coarse reuse} returns only \(O_c^\sharp\).
+It does not restore information from \(J^\sharp\), including information about fields outside
+\(A\cup W\). \emph{Frame-preserving reuse} additionally retains information from
+\(J^\sharp\) about fields outside the write set \(W\).
+
+The replay set \(A\subseteq\Field\) is the part of the input that must be preserved for this
+replacement to be sound. A sound \emph{read set} \(R\) contains every input field whose value
+may be observed by \(s\); a sound write set \(W\) contains every field that \(s\) may modify.
+The operation \(\relate^\sharp\) adds fields needed because of relational information in an
+abstract state. The operation \(\filter^\sharp\) keeps information about selected fields and
+forgets information outside them. Their types and required semantic properties are stated
+below. The \emph{full producer input} means the unfiltered \(I^\sharp\).
+
+For \(A\subseteq\Field\), write \(I\agree{A}J\) when \(I,J\in\State\) agree on every
+field in \(A\). The agreement closure has type
+\[
+  \ProjClose:\mathcal P(\Field)\times\mathcal P(\State)
+  \to\mathcal P(\State)
+\]
+and is defined by
+\[
+  \ProjClose_A(X)=\{J\in\State\mid \exists I\in X,\ I\agree{A}J\}.
+\]
+
+\section{Semantic specifications}
+
+\subsection{Replay set specification}
+
+Semantic expansion is the predicate
+\[
+  \SemanticExpand_s:
+  \mathcal P(\Field)\times\mathcal P(\State)\times\mathcal P(\Field)
+  \to\mathsf{Prop},
+\]
+defined by
+\[
+  \SemanticExpand_s(B,P,A)
+  \Longleftrightarrow
+  \CollectingSemantics{s}\!\left(\ProjClose_A(P)\right)
+  \subseteq
+  \ProjClose_B\!\left(\CollectingSemantics{s}(P)\right).
+  \tag{SE}
+\]
+Thus \(A\) is sufficient for replay on output fields \(B\): allowing producer inputs to vary
+outside \(A\) introduces no new behavior on \(B\).
+
+\subsection{Filter specifications}
+
+Sound and exact filtering are predicates of type
+\[
+  \SoundFilter,\ExactFilter:
+  \mathcal P(\Field)\times\mathbb D^\sharp\times\mathbb D^\sharp
+  \to\mathsf{Prop},
+\]
+defined by
+\begin{align*}
+  \SoundFilter(B,S^\sharp,T^\sharp)
+  &\Longleftrightarrow
+  \ProjClose_B\!\left(\gamma(S^\sharp)\right)\subseteq\gamma(T^\sharp),\\
+  \ExactFilter(B,S^\sharp,T^\sharp)
+  &\Longleftrightarrow
+  \gamma(T^\sharp)=\ProjClose_B\!\left(\gamma(S^\sharp)\right).
+\end{align*}
+\subsection{Reuse specification}
+
+Sound reuse is the predicate
+\[
+  \SoundReuse_s:\mathbb D^\sharp\times\mathbb D^\sharp\to\mathsf{Prop},
+\]
+defined by
+\[
+  \SoundReuse_s(J^\sharp,R^\sharp)
+  \Longleftrightarrow
+  \CollectingSemantics{s}\!\left(\gamma(J^\sharp)\right)
+  \subseteq\gamma(R^\sharp).
+  \tag{SR}
+\]
+
+\section{Replay set construction}
+
+Let \(R,W\subseteq\Field\) be sound read and write sets for \(s\), and let
+\(I^\sharp\in\mathbb D^\sharp\) be the producer input. The operation used to extend a
+candidate replay set with relational dependencies has type
+\[
+  \relate^\sharp:
+  \mathcal P(\Field)\times\mathbb D^\sharp\to\mathcal P(\Field).
+\]
+Choose a replay set \(A\) satisfying
+\[
+  R\subseteq A,
+  \qquad
+  \relate^\sharp(A,I^\sharp)\subseteq A.
+  \tag{Replay Closure}
+\]
+Such a set always exists because \(A=\Field\) satisfies these conditions. When only finitely
+many fields can be added, a potentially smaller set can be computed by the ascending iteration
+\[
+  A_0=R,
+  \qquad
+  A_{n+1}=A_n\cup\relate^\sharp(A_n,I^\sharp),
+\]
+until it stabilizes. The result satisfies Replay Closure. The proofs below require only Replay
+Closure, not termination or minimality.
+
+We assume that the read and write sets satisfy the following semantic property:
+\[
+  R\subseteq A
+  \quad\Longrightarrow\quad
+  \SemanticExpand_s(A\cup W,P,A)
+  \quad\text{for every }P\subseteq\State.
+  \tag{Read/Write Expansion}
+\]
+
+\begin{statementbox}
+\boxheading{Proposition 1 --- Replay set correctness}
+Every \(A\) that satisfies Replay Closure also satisfies
+\[
+  \SemanticExpand_s(A\cup W,\gamma(I^\sharp),A).
+\]
+\end{statementbox}
+
+\textbf{Proof.}
+Replay Closure gives \(R\subseteq A\); Read/Write Expansion gives the conclusion. \qedbox
+
+The two parts of Replay Closure have distinct roles: \(R\subseteq A\) establishes semantic
+sufficiency for executing \(s\), while closure under \(\relate^\sharp\) will establish exact
+projection of the relational producer state.
+
+\section{Filter construction}
+
+The abstract domain provides a filtering operation
+\[
+  \filter^\sharp:
+  \mathcal P(\Field)\times\mathbb D^\sharp\to\mathbb D^\sharp.
+\]
+Its construction is required to satisfy two separate properties:
+\begin{align*}
+  &\SoundFilter\!\left(B,S^\sharp,\filter^\sharp(B,S^\sharp)\right),
+  &&\tag{Filter Sound}\\
+  &\relate^\sharp(B,S^\sharp)\subseteq B
+  \Longrightarrow
+  \ExactFilter\!\left(B,S^\sharp,\filter^\sharp(B,S^\sharp)\right).
+  &&\tag{Closed Exact}
+\end{align*}
+
+\clearpage
+
+\begin{statementbox}
+\boxheading{Proposition 2 --- Exact filtering of the producer input}
+For every replay set \(A\) that satisfies Replay Closure,
+\[
+  \ExactFilter\!\left(A,I^\sharp,\filter^\sharp(A,I^\sharp)\right).
+\]
+\end{statementbox}
+
+\textbf{Proof.}
+Replay Closure gives \(\relate^\sharp(A,I^\sharp)\subseteq A\); Closed Exact gives the
+conclusion. \qedbox
+
+Closed Exact requires \(\filter^\sharp(A,I^\sharp)\) to represent
+\(\ProjClose_A(\gamma(I^\sharp))\) exactly. Therefore, this agreement closure must be
+representable in \(\mathbb D^\sharp\). Exact filtering is required because production analyzes
+\(I^\sharp\) before filtering it. Sound filtering alone remains sufficient for filtering the
+stored output and for lookup.
+
+\section{Summary production}
+
+The abstract semantics has type
+\[
+  \AbstractSemantics{s}:\mathbb D^\sharp\to\mathbb D^\sharp
+\]
+and satisfies analyzer soundness:
+\[
+  \CollectingSemantics{s}\!\left(\gamma(S^\sharp)\right)
+  \subseteq\gamma\!\left(\AbstractSemantics{s}(S^\sharp)\right).
+  \tag{Analyze Sound}
+\]
+For the producer input \(I^\sharp\), define
+\[
+  O^\sharp=\AbstractSemantics{s}(I^\sharp),
+  \qquad
+  I_c^\sharp=\filter^\sharp(A,I^\sharp),
+  \qquad
+  O_c^\sharp=\filter^\sharp(A\cup W,O^\sharp),
+\]
+and store the summary
+\[
+  c=(A,W,I_c^\sharp,O_c^\sharp).
+\]
+
+\begin{statementbox}
+\boxheading{Proposition 3 --- Summary soundness}
+The produced summary satisfies
+\[
+  \CollectingSemantics{s}\!\left(\gamma(I_c^\sharp)\right)
+  \subseteq\gamma(O_c^\sharp).
+  \tag{Summary Sound}
+\]
+\end{statementbox}
+
+\textbf{Proof.}
+Propositions 1 and 2, analyzer soundness, monotonicity of \(\ProjClose_{A\cup W}\), and
+Filter Sound give
+\begin{align*}
+  \CollectingSemantics{s}\!\left(\gamma(I_c^\sharp)\right)
+  &=\CollectingSemantics{s}\!\left(\ProjClose_A(\gamma(I^\sharp))\right)\\
+  &\subseteq\ProjClose_{A\cup W}\!\left(
+      \CollectingSemantics{s}(\gamma(I^\sharp))\right)\\
+  &\subseteq\ProjClose_{A\cup W}\!\left(\gamma(O^\sharp)\right)\\
+  &\subseteq\gamma\!\left(\filter^\sharp(A\cup W,O^\sharp)\right)
+   =\gamma(O_c^\sharp).
+\end{align*}
+\qedbox
+
+\section{Coarse reuse and final soundness}
+
+Lookup by equality is the predicate
+\[
+  \Lookup_c:\mathbb D^\sharp\to\mathsf{Prop},
+  \qquad
+  \Lookup_c(J^\sharp)
+  \Longleftrightarrow
+  \filter^\sharp(A,J^\sharp)=I_c^\sharp.
+\]
+Coarse reuse is the partial operation
+\[
+  \reuse_c^\sharp:\mathbb D^\sharp\rightharpoonup\mathbb D^\sharp,
+  \qquad
+  \reuse_c^\sharp(J^\sharp)=O_c^\sharp
+  \quad\text{when }\Lookup_c(J^\sharp).
+  \tag{Coarse Reuse}
+\]
+
+Filter Sound makes every successful match sound:
+\[
+  \Lookup_c(J^\sharp)
+  \Longrightarrow
+  \gamma(J^\sharp)\subseteq\gamma(I_c^\sharp).
+  \tag{Match Sound}
+\]
+Indeed, \(\gamma(J^\sharp)\subseteq
+\ProjClose_A(\gamma(J^\sharp))\subseteq
+\gamma(\filter^\sharp(A,J^\sharp))=\gamma(I_c^\sharp)\).
+
+\begin{statementbox}
+\boxheading{Proposition 4 --- Sound summary reuse}
+Every accepted coarse reuse satisfies its semantic specification:
+\[
+  \Lookup_c(J^\sharp)
+  \quad\Longrightarrow\quad
+  \SoundReuse_s\!\left(J^\sharp,\reuse_c^\sharp(J^\sharp)\right).
+\]
+\end{statementbox}
+
+\textbf{Proof.}
+Match Sound, monotonicity of \(\CollectingSemantics{s}\), Summary Sound, and Coarse Reuse give
+\[
+  \CollectingSemantics{s}\!\left(\gamma(J^\sharp)\right)
+  \subseteq
+  \CollectingSemantics{s}\!\left(\gamma(I_c^\sharp)\right)
+  \subseteq\gamma(O_c^\sharp)
+  =\gamma\!\left(\reuse_c^\sharp(J^\sharp)\right).
+\]
+This is exactly \(\SoundReuse_s(J^\sharp,\reuse_c^\sharp(J^\sharp))\). \qedbox
+
+\section{Frame-preserving reuse}
+
+To retain the consumer information on fields that \(s\) does not write, assume the concrete
+write-frame property
+\[
+  (J,O)\in\Semantics{s}
+  \quad\Longrightarrow\quad
+  J\agree{\Field\setminus W}O.
+  \tag{Write Frame}
+\]
+The abstract domain provides an operation
+\[
+  \sqcap^\sharp:\mathbb D^\sharp\times\mathbb D^\sharp\to\mathbb D^\sharp
+\]
+that satisfies two separate properties:
+\begin{align*}
+  \gamma(S_1^\sharp)\cap\gamma(S_2^\sharp)
+  &\subseteq\gamma(S_1^\sharp\sqcap^\sharp S_2^\sharp),
+  &&\tag{Meet Sound}\\
+  \gamma(S_1^\sharp\sqcap^\sharp S_2^\sharp)
+  &\subseteq\gamma(S_1^\sharp)\cap\gamma(S_2^\sharp).
+  &&\tag{Meet Reductive}
+\end{align*}
+For every accepted lookup, define frame-preserving reuse by
+\[
+  \reuse_{f,c}^\sharp(J^\sharp)
+  =O_c^\sharp\sqcap^\sharp
+    \filter^\sharp(\Field\setminus W,J^\sharp).
+  \tag{Frame-Preserving Reuse}
+\]
+
+\begin{statementbox}
+\boxheading{Proposition 5 --- Sound and precise frame-preserving reuse}
+Every accepted frame-preserving reuse satisfies both claims:
+\begin{align*}
+  &\text{Sound:}
+  &&\SoundReuse_s\!\left(J^\sharp,\reuse_{f,c}^\sharp(J^\sharp)\right),\\
+  &\text{Precise:}
+  &&\gamma\!\left(\reuse_{f,c}^\sharp(J^\sharp)\right)
+    \subseteq\gamma\!\left(\reuse_c^\sharp(J^\sharp)\right).
+\end{align*}
+\end{statementbox}
+
+\textbf{Proof of Sound.}
+Take \(J\in\gamma(J^\sharp)\) and \((J,O)\in\Semantics{s}\). Proposition~4 gives
+\(O\in\gamma(O_c^\sharp)\). Write Frame gives
+\(J\agree{\Field\setminus W}O\), hence
+\[
+  O\in\ProjClose_{\Field\setminus W}\!\left(\gamma(J^\sharp)\right).
+\]
+Filter Sound then gives
+\[
+  O\in\gamma\!\left(\filter^\sharp(\Field\setminus W,J^\sharp)\right).
+\]
+Thus \(O\) belongs to the intersection of the concretizations of both operands in
+Frame-Preserving Reuse. Meet Sound gives
+\(O\in\gamma(\reuse_{f,c}^\sharp(J^\sharp))\). \qedbox
+
+\textbf{Proof of Precise.}
+Meet Reductive and Coarse Reuse give
+\[
+  \gamma\!\left(\reuse_{f,c}^\sharp(J^\sharp)\right)
+  \subseteq\gamma(O_c^\sharp)
+  =\gamma\!\left(\reuse_c^\sharp(J^\sharp)\right).
+\]
+Therefore, frame-preserving reuse admits no more concrete states than coarse reuse. \qedbox
+
+\end{document}

@@ -1,0 +1,6 @@
+.DS_Store
+doc/build/
+lean/.lake/
+dist/
+*.olean
+*.ilean
