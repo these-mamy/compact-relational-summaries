@@ -153,7 +153,8 @@ and is defined by
 
 \subsection{Replay set specification}
 
-Semantic expansion is the predicate
+Semantic expansion specifies when a replay set \(A\) is sufficient to preserve the possible
+outputs on fields \(B\). It is the predicate
 \[
   \SemanticExpand_s:
   \mathcal P(\Field)\times\mathcal P(\State)\times\mathcal P(\Field)
@@ -168,12 +169,13 @@ defined by
   \ProjClose_B\!\left(\CollectingSemantics{s}(P)\right).
   \tag{SE}
 \]
-Thus \(A\) is sufficient for replay on output fields \(B\): allowing producer inputs to vary
-outside \(A\) introduces no new behavior on \(B\).
+Thus, \(A\) is sufficient for replay on the output fields \(B\): varying the values outside
+\(A\), while keeping \(A\) fixed, cannot create a new possible output on \(B\).
 
 \subsection{Filter specifications}
 
-Sound and exact filtering are predicates of type
+Sound and exact filtering both take three arguments: \(B\), the fields to retain;
+\(S^\sharp\), the state before filtering; and \(T^\sharp\), the filtered state:
 \[
   \SoundFilter,\ExactFilter:
   \mathcal P(\Field)\times\mathbb D^\sharp\times\mathbb D^\sharp
@@ -190,16 +192,17 @@ defined by
 \end{align*}
 \subsection{Reuse specification}
 
-Sound reuse is the predicate
+Sound reuse takes two arguments: \(J^\sharp\), the consumer input, and \(O_r^\sharp\), the
+reuse result:
 \[
   \SoundReuse_s:\mathbb D^\sharp\times\mathbb D^\sharp\to\mathsf{Prop},
 \]
 defined by
 \[
-  \SoundReuse_s(J^\sharp,R^\sharp)
+  \SoundReuse_s(J^\sharp,O_r^\sharp)
   \Longleftrightarrow
   \CollectingSemantics{s}\!\left(\gamma(J^\sharp)\right)
-  \subseteq\gamma(R^\sharp).
+  \subseteq\gamma(O_r^\sharp).
   \tag{SR}
 \]
 
