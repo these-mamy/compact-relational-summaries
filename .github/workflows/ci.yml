@@ -19,9 +19,17 @@ jobs:
       - uses: leanprover/lean-action@v1
         with:
           lake-package-directory: lean
-          build: true
+          auto-config: false
+          build: false
           test: false
-          use-mathlib-cache: true
+          use-mathlib-cache: false
+          use-github-cache: false
+      - name: Resolve dependencies and check proofs
+        working-directory: lean
+        run: |
+          lake update
+          lake exe cache get
+          lake build
 
   document:
     name: Build proof note
