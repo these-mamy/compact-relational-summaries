@@ -95,12 +95,13 @@ Sound Constructions for Summary Reuse\par}
 
 \section{Setting and terminology}
 
-Fix a statement or function body \(s\). Let \(\Field\) be the set of fields,
-\(\State\) the set of concrete states, \(\mathbb D^\sharp\) an abstract domain, and
+Fix a statement or function body \(s\). Let \(\Field\) denote the set of fields and
+\(\State\) the set of concrete states. Let \(\mathbb D^\sharp\) be an abstract domain, with
 \[
   \gamma:\mathbb D^\sharp\to\mathcal P(\State)
 \]
-its concretization. The concrete and collecting semantics of \(s\) have types
+as its concretization. The concrete semantics of \(s\) is a relation between input and output
+states; its collecting semantics maps a set of input states to the possible output states:
 \[
   \Semantics{s}\subseteq\State\times\State,
   \qquad
@@ -112,31 +113,33 @@ where
   =\{O\in\State\mid \exists I\in X,\ (I,O)\in\Semantics{s}\}.
 \]
 
-The \emph{producer} analyzes \(s\) from an abstract input \(I^\sharp\), computes an abstract
-output \(O^\sharp\), and stores a \emph{summary}, namely a cache entry
+We call the analysis that produces a summary the \emph{producer}. It analyzes \(s\) from an
+abstract input \(I^\sharp\), obtains \(O^\sharp\), and stores the cache entry
 \[
   c=(A,W,I_c^\sharp,O_c^\sharp),
 \]
 where \(A\) is the \emph{replay set}, \(W\) is a sound write set, and
-\(I_c^\sharp,O_c^\sharp\) are the stored input and output. The \emph{consumer} is a later
-analysis of the same \(s\) from a current abstract input \(J^\sharp\).
-\emph{Lookup}, or \emph{matching}, tests whether this consumer input is compatible with the
-stored input on \(A\). A successful \emph{replay} (synonym: \emph{reuse}) replaces analysis of
-\(s\) at the consumer with the summary result. \emph{Coarse reuse} returns only \(O_c^\sharp\).
-It does not restore information from \(J^\sharp\), including information about fields outside
-\(A\cup W\). \emph{Frame-preserving reuse} additionally retains information from
-\(J^\sharp\) about fields outside the write set \(W\).
+\(I_c^\sharp,O_c^\sharp\) are the stored input and output. We call a later analysis of the
+same \(s\), starting from the current abstract input \(J^\sharp\), the \emph{consumer}.
+\emph{Lookup}, also called \emph{matching}, checks whether the consumer input and the stored
+input agree on the replay set \(A\). When lookup succeeds, \emph{replay}, also called
+\emph{reuse}, uses the stored summary result instead of reanalyzing \(s\) for the consumer.
+\emph{Coarse reuse} returns only \(O_c^\sharp\). Consequently, coarse reuse does not retain
+information from the consumer input \(J^\sharp\), including information about fields outside
+\(A\cup W\). By contrast, \emph{frame-preserving reuse} also retains the consumer's
+information about fields outside the write set \(W\).
 
-The replay set \(A\subseteq\Field\) is the part of the input that must be preserved for this
-replacement to be sound. A sound \emph{read set} \(R\) contains every input field whose value
-may be observed by \(s\); a sound write set \(W\) contains every field that \(s\) may modify.
-The operation \(\relate^\sharp\) adds fields needed because of relational information in an
-abstract state. The operation \(\filter^\sharp\) keeps information about selected fields and
-forgets information outside them. Their types and required semantic properties are stated
-below. The \emph{full producer input} means the unfiltered \(I^\sharp\).
+Reuse is sound only when it preserves the input fields in the replay set \(A\). A sound
+\emph{read set} \(R\) contains every input field whose value \(s\) may read or otherwise
+depend on; a sound write set \(W\) contains every field that \(s\) may modify.
+The operation \(\relate^\sharp\) adds any field that must be retained together with the selected
+fields to preserve a relation represented in the abstract state. The operation \(\filter^\sharp\) retains information about the selected fields and
+discards information about all other fields. Their types and the semantic properties they must
+satisfy are specified below.
 
-For \(A\subseteq\Field\), write \(I\agree{A}J\) when \(I,J\in\State\) agree on every
-field in \(A\). The agreement closure has type
+For \(A\subseteq\Field\), write \(I\agree{A}J\) when the concrete states \(I\) and \(J\)
+agree on every field in \(A\). The agreement closure maps a set of fields and a set of concrete
+states to a set of concrete states:
 \[
   \ProjClose:\mathcal P(\Field)\times\mathcal P(\State)
   \to\mathcal P(\State)
