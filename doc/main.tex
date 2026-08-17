@@ -67,15 +67,16 @@
 \newcommand{\Semantics}[1]{\mathcal S\mathopen{⟦}#1\mathclose{⟧}}
 \newcommand{\CollectingSemantics}[1]{\widehat{\mathcal S}\mathopen{⟦}#1\mathclose{⟧}}
 \newcommand{\AbstractSemantics}[1]{\mathcal S^\sharp\mathopen{⟦}#1\mathclose{⟧}}
-\newcommand{\ProjClose}{\mathsf{ProjClose}}
+\newcommand{\ProjClose}{\mathsf{closure}}
 \newcommand{\filter}{\mathsf{filter}}
 \newcommand{\relate}{\mathsf{relate}}
-\newcommand{\reuse}{\mathsf{reuse}}
-\newcommand{\Lookup}{\mathsf{Lookup}}
-\newcommand{\SemanticExpand}{\mathsf{SemanticExpand}}
-\newcommand{\SoundFilter}{\mathsf{SoundFilter}}
-\newcommand{\ExactFilter}{\mathsf{ExactFilter}}
-\newcommand{\SoundReuse}{\mathsf{SoundReuse}}
+\newcommand{\reuse}{\mathsf{coarse\ reuse}}
+\newcommand{\frameReuse}{\mathsf{frame\text{-}preserving\ reuse}}
+\newcommand{\Lookup}{\mathsf{lookup}}
+\newcommand{\SemanticExpand}{\mathsf{semantic\ expansion}}
+\newcommand{\SoundFilter}{\mathsf{sound\ filter}}
+\newcommand{\ExactFilter}{\mathsf{exact\ filter}}
+\newcommand{\SoundReuse}{\mathsf{sound\ reuse}}
 \newcommand{\agree}[1]{\mathrel{\equiv_{#1}}}
 \newcommand{\qedbox}{\hfill\raisebox{0.15ex}{\fboxsep=0pt\fbox{\rule{0pt}{0.55em}\rule{0.55em}{0pt}}}}
 
@@ -144,7 +145,7 @@ states to a set of concrete states:
 \]
 and is defined by
 \[
-  \ProjClose_A(X)=\{J\in\State\mid \exists I\in X,\ I\agree{A}J\}.
+  \ProjClose(A,X)=\{J\in\State\mid \exists I\in X,\ I\agree{A}J\}.
 \]
 
 \section{Semantic specifications}
@@ -154,17 +155,17 @@ and is defined by
 Semantic expansion specifies when a replay set \(A\) is sufficient to preserve the possible
 outputs on fields \(B\). It is the predicate
 \[
-  \SemanticExpand_s:
-  \mathcal P(\Field)\times\mathcal P(\State)\times\mathcal P(\Field)
+  \SemanticExpand:
+  \mathcal P(\Field)\times\mathcal P(\Field)\times\mathcal P(\State)
   \to\mathsf{Prop},
 \]
 defined by
 \[
-  \SemanticExpand_s(B,P,A)
+  \SemanticExpand(A;B,P)
   \Longleftrightarrow
-  \CollectingSemantics{s}\!\left(\ProjClose_A(P)\right)
+  \CollectingSemantics{s}\!\left(\ProjClose(A,P)\right)
   \subseteq
-  \ProjClose_B\!\left(\CollectingSemantics{s}(P)\right).
+  \ProjClose\!\left(B,\CollectingSemantics{s}(P)\right).
   \tag{SE}
 \]
 Thus, \(A\) is sufficient for replay on the output fields \(B\): varying the values outside
@@ -183,24 +184,24 @@ defined by
 \begin{align*}
   \SoundFilter(B,S^\sharp,T^\sharp)
   &\Longleftrightarrow
-  \ProjClose_B\!\left(\gamma(S^\sharp)\right)\subseteq\gamma(T^\sharp),\\
+  \ProjClose\!\left(B,\gamma(S^\sharp)\right)\subseteq\gamma(T^\sharp),\\
   \ExactFilter(B,S^\sharp,T^\sharp)
   &\Longleftrightarrow
-  \gamma(T^\sharp)=\ProjClose_B\!\left(\gamma(S^\sharp)\right).
+  \gamma(T^\sharp)=\ProjClose\!\left(B,\gamma(S^\sharp)\right).
 \end{align*}
 \subsection{Reuse specification}
 
-Sound reuse takes two arguments: \(J^\sharp\), the consumer input, and \(O_r^\sharp\), the
+Sound reuse takes two arguments: \(J^\sharp\), the consumer input, and \(Q^\sharp\), the
 reuse result:
 \[
-  \SoundReuse_s:\mathbb D^\sharp\times\mathbb D^\sharp\to\mathsf{Prop},
+  \SoundReuse:\mathbb D^\sharp\times\mathbb D^\sharp\to\mathsf{Prop},
 \]
 defined by
 \[
-  \SoundReuse_s(J^\sharp,O_r^\sharp)
+  \SoundReuse(J^\sharp,Q^\sharp)
   \Longleftrightarrow
   \CollectingSemantics{s}\!\left(\gamma(J^\sharp)\right)
-  \subseteq\gamma(O_r^\sharp).
+  \subseteq\gamma(Q^\sharp).
   \tag{SR}
 \]
 
@@ -222,8 +223,9 @@ A replay set \(A\) must satisfy the following \emph{Replay Closure} conditions:
   \tag{Replay Closure}
 \]
 The first condition retains every field that \(s\) may read. The second retains every field
-needed to preserve relations including the fields already selected. Together, they make replay
-semantically sufficient and let us obtain an exact projection of the relational producer state.
+needed to preserve relations including the fields already selected. Together, they ensure that
+retaining the fields in \(A\) is enough to reproduce the possible outputs of \(s\) on \(A\cup W\),
+and let us obtain an exact projection of the relational producer state.
 
 To construct a smaller replay set when only finitely many fields can be added, start from the
 read set and repeatedly add relational dependencies:
@@ -240,7 +242,7 @@ We assume that the read and write sets satisfy the following semantic property:
 \[
   R\subseteq A
   \quad\Longrightarrow\quad
-  \SemanticExpand_s(A\cup W,P,A)
+  \SemanticExpand(A;A\cup W,P)
   \quad\text{for every }P\subseteq\State.
   \tag{Read/Write Expansion}
 \]
@@ -249,7 +251,7 @@ We assume that the read and write sets satisfy the following semantic property:
 \boxheading{Proposition 1 --- Replay set correctness}
 Every \(A\) that satisfies Replay Closure also satisfies
 \[
-  \SemanticExpand_s(A\cup W,\gamma(I^\sharp),A).
+  \SemanticExpand(A;A\cup W,\gamma(I^\sharp)).
 \]
 \end{statementbox}
 
@@ -293,7 +295,7 @@ Replay Closure gives \(\relate^\sharp(A,I^\sharp)\subseteq A\); Closed Exact giv
 conclusion. \qedbox
 
 Production analyzes \(I^\sharp\) before filtering it. Therefore,
-\(\filter^\sharp(A,I^\sharp)\) must represent \(\ProjClose_A(\gamma(I^\sharp))\) exactly,
+\(\filter^\sharp(A,I^\sharp)\) must represent \(\ProjClose(A,\gamma(I^\sharp))\) exactly,
 and this agreement closure must be representable in \(\mathbb D^\sharp\). By contrast, sound
 filtering suffices for the stored output and lookup.
 
@@ -334,14 +336,14 @@ The produced summary satisfies
 \end{statementbox}
 
 \textbf{Proof.}
-Propositions 1 and 2, analyzer soundness, monotonicity of \(\ProjClose_{A\cup W}\), and
+Propositions 1 and 2, analyzer soundness, monotonicity of \(\ProjClose(A\cup W,\cdot)\), and
 Filter Sound give
 \begin{align*}
   \CollectingSemantics{s}\!\left(\gamma(I_c^\sharp)\right)
-  &=\CollectingSemantics{s}\!\left(\ProjClose_A(\gamma(I^\sharp))\right)\\
-  &\subseteq\ProjClose_{A\cup W}\!\left(
+  &=\CollectingSemantics{s}\!\left(\ProjClose(A,\gamma(I^\sharp))\right)\\
+  &\subseteq\ProjClose\!\left(A\cup W,
       \CollectingSemantics{s}(\gamma(I^\sharp))\right)\\
-  &\subseteq\ProjClose_{A\cup W}\!\left(\gamma(O^\sharp)\right)\\
+  &\subseteq\ProjClose\!\left(A\cup W,\gamma(O^\sharp)\right)\\
   &\subseteq\gamma\!\left(\filter^\sharp(A\cup W,O^\sharp)\right)
    =\gamma(O_c^\sharp).
 \end{align*}
@@ -352,39 +354,39 @@ Filter Sound give
 Lookup for a summary \(c\) succeeds exactly when the consumer input, filtered to \(A\), equals
 the stored input:
 \[
-  \Lookup_c:\mathbb D^\sharp\to\mathsf{Prop},
+  \Lookup:\mathbb D^\sharp\to\mathsf{Prop},
   \qquad
-  \Lookup_c(J^\sharp)
+  \Lookup(J^\sharp)
   \Longleftrightarrow
   \filter^\sharp(A,J^\sharp)=I_c^\sharp.
 \]
 When lookup succeeds, coarse reuse returns the stored output \(O_c^\sharp\):
 \[
-  \reuse_c^\sharp:\mathbb D^\sharp\rightharpoonup\mathbb D^\sharp,
+  \reuse^\sharp:\mathbb D^\sharp\rightharpoonup\mathbb D^\sharp,
   \qquad
-  \reuse_c^\sharp(J^\sharp)=O_c^\sharp
-  \quad\text{when }\Lookup_c(J^\sharp).
+  \reuse^\sharp(J^\sharp)=O_c^\sharp
+  \quad\text{when }\Lookup(J^\sharp).
   \tag{Coarse Reuse}
 \]
 
 Filter Sound ensures that every successful lookup satisfies the following inclusion:
 \[
-  \Lookup_c(J^\sharp)
+  \Lookup(J^\sharp)
   \Longrightarrow
   \gamma(J^\sharp)\subseteq\gamma(I_c^\sharp).
   \tag{Match Sound}
 \]
 Indeed, \(\gamma(J^\sharp)\subseteq
-\ProjClose_A(\gamma(J^\sharp))\subseteq
+\ProjClose(A,\gamma(J^\sharp))\subseteq
 \gamma(\filter^\sharp(A,J^\sharp))=\gamma(I_c^\sharp)\).
 
 \begin{statementbox}
 \boxheading{Proposition 4 --- Sound summary reuse}
 Every accepted coarse reuse satisfies its semantic specification:
 \[
-  \Lookup_c(J^\sharp)
+  \Lookup(J^\sharp)
   \quad\Longrightarrow\quad
-  \SoundReuse_s\!\left(J^\sharp,\reuse_c^\sharp(J^\sharp)\right).
+  \SoundReuse\!\left(J^\sharp,\reuse^\sharp(J^\sharp)\right).
 \]
 \end{statementbox}
 
@@ -395,9 +397,9 @@ Match Sound, monotonicity of \(\CollectingSemantics{s}\), Summary Sound, and Coa
   \subseteq
   \CollectingSemantics{s}\!\left(\gamma(I_c^\sharp)\right)
   \subseteq\gamma(O_c^\sharp)
-  =\gamma\!\left(\reuse_c^\sharp(J^\sharp)\right).
+  =\gamma\!\left(\reuse^\sharp(J^\sharp)\right).
 \]
-This is exactly \(\SoundReuse_s(J^\sharp,\reuse_c^\sharp(J^\sharp))\). \qedbox
+This is exactly \(\SoundReuse(J^\sharp,\reuse^\sharp(J^\sharp))\). \qedbox
 
 \section{Sound frame-preserving reuse}
 
@@ -427,7 +429,7 @@ Together, these properties make the meet represent the intersection of the two c
 exactly. When lookup succeeds, frame-preserving reuse intersects the stored output with the
 consumer information on fields outside \(W\):
 \[
-  \reuse_{f,c}^\sharp(J^\sharp)
+  \frameReuse^\sharp(J^\sharp)
   =O_c^\sharp\sqcap^\sharp
     \filter^\sharp(\Field\setminus W,J^\sharp).
   \tag{Frame-Preserving Reuse}
@@ -438,10 +440,10 @@ consumer information on fields outside \(W\):
 Every accepted frame-preserving reuse satisfies both claims:
 \begin{align*}
   &\text{Sound:}
-  &&\SoundReuse_s\!\left(J^\sharp,\reuse_{f,c}^\sharp(J^\sharp)\right),\\
+  &&\SoundReuse\!\left(J^\sharp,\frameReuse^\sharp(J^\sharp)\right),\\
   &\text{Precise:}
-  &&\gamma\!\left(\reuse_{f,c}^\sharp(J^\sharp)\right)
-    \subseteq\gamma\!\left(\reuse_c^\sharp(J^\sharp)\right).
+  &&\gamma\!\left(\frameReuse^\sharp(J^\sharp)\right)
+    \subseteq\gamma\!\left(\reuse^\sharp(J^\sharp)\right).
 \end{align*}
 \end{statementbox}
 
@@ -450,7 +452,7 @@ Take \(J\in\gamma(J^\sharp)\) and \((J,O)\in\Semantics{s}\). Proposition~4 gives
 \(O\in\gamma(O_c^\sharp)\). Write Frame gives
 \(J\agree{\Field\setminus W}O\), hence
 \[
-  O\in\ProjClose_{\Field\setminus W}\!\left(\gamma(J^\sharp)\right).
+  O\in\ProjClose\!\left(\Field\setminus W,\gamma(J^\sharp)\right).
 \]
 Filter Sound then gives
 \[
@@ -458,14 +460,14 @@ Filter Sound then gives
 \]
 Thus \(O\) belongs to the intersection of the concretizations of both operands in
 Frame-Preserving Reuse. Meet Sound gives
-\(O\in\gamma(\reuse_{f,c}^\sharp(J^\sharp))\). \qedbox
+\(O\in\gamma(\frameReuse^\sharp(J^\sharp))\). \qedbox
 
 \textbf{Proof of Precise.}
 Meet Reductive and Coarse Reuse give
 \[
-  \gamma\!\left(\reuse_{f,c}^\sharp(J^\sharp)\right)
+  \gamma\!\left(\frameReuse^\sharp(J^\sharp)\right)
   \subseteq\gamma(O_c^\sharp)
-  =\gamma\!\left(\reuse_c^\sharp(J^\sharp)\right).
+  =\gamma\!\left(\reuse^\sharp(J^\sharp)\right).
 \]
 Therefore, frame-preserving reuse admits no more concrete states than coarse reuse. \qedbox
 
