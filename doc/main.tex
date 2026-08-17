@@ -44,10 +44,8 @@
 
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[L]{\sffamily\small Compact relational summaries}
-\fancyhead[R]{\sffamily\small Specifications and constructions}
 \fancyfoot[C]{\small\thepage}
-\renewcommand{\headrulewidth}{0.35pt}
+\renewcommand{\headrulewidth}{0pt}
 \renewcommand{\footrulewidth}{0pt}
 
 \newtcolorbox{statementbox}[1][]{
@@ -89,7 +87,7 @@
 Semantic Specifications and\\
 Sound Constructions for Summary Reuse\par}
 \vspace{4mm}
-{\color{muted}\large Replay sets, exact filtering, and frame-preserving reuse\par}
+{\color{muted}\large Replay sets, exact filtering, summary production, and sound reuse\par}
 \vspace{4mm}
 {\color{proofred}\rule{\textwidth}{1pt}\par}
 
@@ -208,29 +206,35 @@ defined by
 
 \section{Replay set construction}
 
-Let \(R,W\subseteq\Field\) be sound read and write sets for \(s\), and let
-\(I^\sharp\in\mathbb D^\sharp\) be the producer input. The operation used to extend a
-candidate replay set with relational dependencies has type
+Let \(R\) and \(W\) be sound read and write sets for \(s\), and let \(I^\sharp\) be the
+producer input. The operation \(\relate^\sharp\) extends a candidate replay set with fields
+needed to preserve relations in \(I^\sharp\):
 \[
   \relate^\sharp:
   \mathcal P(\Field)\times\mathbb D^\sharp\to\mathcal P(\Field).
 \]
-Choose a replay set \(A\) satisfying
+
+A replay set \(A\) must satisfy the following \emph{Replay Closure} conditions:
 \[
   R\subseteq A,
   \qquad
   \relate^\sharp(A,I^\sharp)\subseteq A.
   \tag{Replay Closure}
 \]
-Such a set always exists because \(A=\Field\) satisfies these conditions. When only finitely
-many fields can be added, a potentially smaller set can be computed by the ascending iteration
+The first condition retains every field that \(s\) may read. The second retains every field
+needed to preserve relations including the fields already selected. Together, they make replay
+semantically sufficient and let us obtain an exact projection of the relational producer state.
+
+To construct a smaller replay set when only finitely many fields can be added, start from the
+read set and repeatedly add relational dependencies:
 \[
   A_0=R,
   \qquad
   A_{n+1}=A_n\cup\relate^\sharp(A_n,I^\sharp),
 \]
-until it stabilizes. The result satisfies Replay Closure. The proofs below require only Replay
-Closure, not termination or minimality.
+until the sequence stabilizes. The result satisfies Replay Closure. A replay set always exists,
+because \(A=\Field\) satisfies the two closure conditions. The proofs below require only
+Replay Closure, not termination or leastness.
 
 We assume that the read and write sets satisfy the following semantic property:
 \[
@@ -252,18 +256,15 @@ Every \(A\) that satisfies Replay Closure also satisfies
 \textbf{Proof.}
 Replay Closure gives \(R\subseteq A\); Read/Write Expansion gives the conclusion. \qedbox
 
-The two parts of Replay Closure have distinct roles: \(R\subseteq A\) establishes semantic
-sufficiency for executing \(s\), while closure under \(\relate^\sharp\) will establish exact
-projection of the relational producer state.
-
 \section{Filter construction}
 
-The abstract domain provides a filtering operation
+The abstract domain provides a filtering operation that retains information about a selected set
+of fields:
 \[
   \filter^\sharp:
   \mathcal P(\Field)\times\mathbb D^\sharp\to\mathbb D^\sharp.
 \]
-Its construction is required to satisfy two separate properties:
+It must satisfy the following two properties:
 \begin{align*}
   &\SoundFilter\!\left(B,S^\sharp,\filter^\sharp(B,S^\sharp)\right),
   &&\tag{Filter Sound}\\
@@ -273,11 +274,15 @@ Its construction is required to satisfy two separate properties:
   &&\tag{Closed Exact}
 \end{align*}
 
+Filter Sound requires the filtered state to safely cover the retained information. Closed Exact
+requires it to represent that information exactly when the selected fields already contain all
+their relational dependencies.
+
 \clearpage
 
 \begin{statementbox}
 \boxheading{Proposition 2 --- Exact filtering of the producer input}
-For every replay set \(A\) that satisfies Replay Closure,
+For every replay set \(A\) satisfying Replay Closure,
 \[
   \ExactFilter\!\left(A,I^\sharp,\filter^\sharp(A,I^\sharp)\right).
 \]
@@ -287,15 +292,15 @@ For every replay set \(A\) that satisfies Replay Closure,
 Replay Closure gives \(\relate^\sharp(A,I^\sharp)\subseteq A\); Closed Exact gives the
 conclusion. \qedbox
 
-Closed Exact requires \(\filter^\sharp(A,I^\sharp)\) to represent
-\(\ProjClose_A(\gamma(I^\sharp))\) exactly. Therefore, this agreement closure must be
-representable in \(\mathbb D^\sharp\). Exact filtering is required because production analyzes
-\(I^\sharp\) before filtering it. Sound filtering alone remains sufficient for filtering the
-stored output and for lookup.
+Production analyzes \(I^\sharp\) before filtering it. Therefore,
+\(\filter^\sharp(A,I^\sharp)\) must represent \(\ProjClose_A(\gamma(I^\sharp))\) exactly,
+and this agreement closure must be representable in \(\mathbb D^\sharp\). By contrast, sound
+filtering suffices for the stored output and lookup.
 
 \section{Summary production}
 
-The abstract semantics has type
+The abstract semantics maps each abstract state to an abstract state and soundly overapproximates
+its collecting semantics:
 \[
   \AbstractSemantics{s}:\mathbb D^\sharp\to\mathbb D^\sharp
 \]
@@ -342,9 +347,10 @@ Filter Sound give
 \end{align*}
 \qedbox
 
-\section{Coarse reuse and final soundness}
+\section{Sound coarse reuse}
 
-Lookup by equality is the predicate
+Lookup for a summary \(c\) succeeds exactly when the consumer input, filtered to \(A\), equals
+the stored input:
 \[
   \Lookup_c:\mathbb D^\sharp\to\mathsf{Prop},
   \qquad
@@ -352,7 +358,7 @@ Lookup by equality is the predicate
   \Longleftrightarrow
   \filter^\sharp(A,J^\sharp)=I_c^\sharp.
 \]
-Coarse reuse is the partial operation
+When lookup succeeds, coarse reuse returns the stored output \(O_c^\sharp\):
 \[
   \reuse_c^\sharp:\mathbb D^\sharp\rightharpoonup\mathbb D^\sharp,
   \qquad
@@ -361,7 +367,7 @@ Coarse reuse is the partial operation
   \tag{Coarse Reuse}
 \]
 
-Filter Sound makes every successful match sound:
+Filter Sound ensures that every successful lookup satisfies the following inclusion:
 \[
   \Lookup_c(J^\sharp)
   \Longrightarrow
@@ -393,21 +399,21 @@ Match Sound, monotonicity of \(\CollectingSemantics{s}\), Summary Sound, and Coa
 \]
 This is exactly \(\SoundReuse_s(J^\sharp,\reuse_c^\sharp(J^\sharp))\). \qedbox
 
-\section{Frame-preserving reuse}
+\section{Sound frame-preserving reuse}
 
-To retain the consumer information on fields that \(s\) does not write, assume the concrete
-write-frame property
+To retain consumer information about fields that \(s\) does not write, assume the following
+Write Frame property:
 \[
   (J,O)\in\Semantics{s}
   \quad\Longrightarrow\quad
   J\agree{\Field\setminus W}O.
   \tag{Write Frame}
 \]
-The abstract domain provides an operation
+The abstract domain also provides a meet operation:
 \[
   \sqcap^\sharp:\mathbb D^\sharp\times\mathbb D^\sharp\to\mathbb D^\sharp
 \]
-that satisfies two separate properties:
+It must satisfy two separate properties:
 \begin{align*}
   \gamma(S_1^\sharp)\cap\gamma(S_2^\sharp)
   &\subseteq\gamma(S_1^\sharp\sqcap^\sharp S_2^\sharp),
@@ -416,7 +422,10 @@ that satisfies two separate properties:
   &\subseteq\gamma(S_1^\sharp)\cap\gamma(S_2^\sharp).
   &&\tag{Meet Reductive}
 \end{align*}
-For every accepted lookup, define frame-preserving reuse by
+
+Together, these properties make the meet represent the intersection of the two concretizations
+exactly. When lookup succeeds, frame-preserving reuse intersects the stored output with the
+consumer information on fields outside \(W\):
 \[
   \reuse_{f,c}^\sharp(J^\sharp)
   =O_c^\sharp\sqcap^\sharp
