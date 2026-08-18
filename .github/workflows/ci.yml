@@ -17,14 +17,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: leanprover/lean-action@v1
-        with:
-          lake-package-directory: lean
-          auto-config: true
-          build: false
-          test: false
-          use-mathlib-cache: false
-          use-github-cache: false
+      - name: Install Lean
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf \
+            https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh \
+            | sh -s -- -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
       - name: Resolve dependencies and check proofs
         working-directory: lean
         run: |
