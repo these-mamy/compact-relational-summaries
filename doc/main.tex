@@ -125,16 +125,21 @@ input agree on the replay set \(A\). When lookup succeeds, \emph{replay}, also c
 \emph{reuse}, uses the stored summary result instead of reanalyzing \(s\) for the consumer.
 \emph{Coarse reuse} returns only \(O_c^\sharp\). Consequently, coarse reuse does not retain
 information from the consumer input \(J^\sharp\), including information about fields outside
-\(A\cup W\). By contrast, \emph{frame-preserving reuse} also retains the consumer's
-information about fields outside the write set \(W\).
+\(A\cup W\). By contrast, \emph{frame-preserving reuse} is designed to retain the consumer's
+information about fields outside the write set \(W\). Section~7 states the additional
+reductivity contract that makes this guarantee semantic rather than merely operational.
 
 Reuse is sound only when it preserves the input fields in the replay set \(A\). A sound
 \emph{read set} \(R\) contains every input field whose value \(s\) may read or otherwise
 depend on; a sound write set \(W\) contains every field that \(s\) may modify.
 The operation \(\relate^\sharp\) adds any field that must be retained together with the selected
-fields to preserve a relation represented in the abstract state. The operation \(\filter^\sharp\) retains information about the selected fields and
-discards information about all other fields. Their types and the semantic properties they must
-satisfy are specified below.
+fields to preserve a relation represented in the abstract state. The operation \(\filter^\sharp\)
+returns an abstraction that is sound for the selected fields; when filtering is exact, it retains
+exactly that information and discards information about all other fields. Their types and the
+semantic properties they must satisfy are specified below. Every state component that can affect
+the semantics must either be represented by \(\Field\) or held fixed by the statement and cache
+key; the explicit expansion and frame properties below are the semantic certificates used by the
+proofs.
 
 For \(A\subseteq\Field\), write \(I\agree{A}J\) when the concrete states \(I\) and \(J\)
 agree on every field in \(A\). The agreement closure maps a set of fields and a set of concrete
@@ -223,12 +228,13 @@ A replay set \(A\) must satisfy the following \emph{Replay Closure} conditions:
   \tag{Replay Closure}
 \]
 The first condition retains every field that \(s\) may read. The second retains every field
-needed to preserve relations including the fields already selected. Together, they ensure that
-retaining the fields in \(A\) is enough to reproduce the possible outputs of \(s\) on \(A\cup W\),
-and let us obtain an exact projection of the relational producer state.
+needed to preserve relations including the fields already selected. The conditions have distinct
+roles: \(R\subseteq A\), together with Read/Write Expansion, establishes semantic sufficiency for
+executing \(s\); closure under \(\relate^\sharp\), together with Closed Exact, establishes exact
+filtering of the producer state. Neither conclusion follows from Replay Closure alone.
 
-To construct a smaller replay set when only finitely many fields can be added, start from the
-read set and repeatedly add relational dependencies:
+To construct a smaller replay set when the reachable field universe has finite height, start from
+the read set and repeatedly add relational dependencies:
 \[
   A_0=R,
   \qquad
@@ -238,7 +244,8 @@ until the sequence stabilizes. The result satisfies Replay Closure. A replay set
 because \(A=\Field\) satisfies the two closure conditions. The proofs below require only
 Replay Closure, not termination or leastness.
 
-We assume that the read and write sets satisfy the following semantic property:
+The informal may-read and may-write descriptions do not by themselves prove the required
+noninterference result. We therefore assume the following independent semantic property:
 \[
   R\subseteq A
   \quad\Longrightarrow\quad
@@ -246,6 +253,8 @@ We assume that the read and write sets satisfy the following semantic property:
   \quad\text{for every }P\subseteq\State.
   \tag{Read/Write Expansion}
 \]
+The proof below needs only the instance \(P=\gamma(I^\sharp)\); the universal form is a reusable
+certificate for other producer inputs.
 
 \begin{statementbox}
 \boxheading{Proposition 1 --- Replay set correctness}
@@ -293,7 +302,9 @@ The following equation expresses when an abstract state separates exactly across
 \]
 When this equation holds, the information represented by \(S^\sharp\) contains no relation
 crossing between \(A\) and its complement. It gives the semantic intuition behind relation
-closure.
+closure. Separation is displayed as an independent diagnostic property: it is not a premise of
+Propositions~1--5, is not implied by Replay Closure, and does not by itself establish either
+representability or exact filtering. Those obligations are carried explicitly by Closed Exact.
 
 \begin{statementbox}
 \boxheading{Proposition 2 --- Exact filtering of the producer input}
@@ -307,10 +318,19 @@ Under Replay Closure, filtering the producer input to \(A\) is exact:
 Replay Closure gives \(\relate^\sharp(A,I^\sharp)\subseteq A\); Closed Exact gives the
 conclusion. \qedbox
 
-Production analyzes \(I^\sharp\) before filtering it. Therefore,
-\(\filter^\sharp(A,I^\sharp)\) must represent \(\ProjClose(A,\gamma(I^\sharp))\) exactly,
-and this agreement closure must be representable in \(\mathbb D^\sharp\). By contrast, sound
-filtering suffices for the stored output and lookup.
+Exact producer filtering is a sufficient uniform construction and requires the agreement closure
+to be representable in \(\mathbb D^\sharp\). The production proof itself uses only the upper
+bound
+\[
+  \gamma(I_c^\sharp)
+  \subseteq
+  \ProjClose\!\left(A,\gamma(I^\sharp)\right).
+  \tag{Production Input}
+\]
+Filter Sound supplies the opposite inclusion, so the uniform filter used here satisfies both
+directions exactly. A producer may instead discharge Summary Sound directly or establish
+Production Input by another construction. Sound filtering remains sufficient for the stored
+output and for deriving Match Sound from filtered-key equality.
 
 \section{Summary production}
 
@@ -392,6 +412,9 @@ Filter Sound ensures that every successful lookup satisfies the following inclus
 Indeed, \(\gamma(J^\sharp)\subseteq
 \ProjClose(A,\gamma(J^\sharp))\subseteq
 \gamma(\filter^\sharp(A,J^\sharp))=\gamma(I_c^\sharp)\).
+Thus Match Sound is the semantic lookup contract; filtered abstract equality is one sufficient
+implementation. Noncanonical abstract representations may cause this equality test to reject a
+semantically valid match, but such false negatives do not affect soundness.
 
 \begin{statementbox}
 \boxheading{Proposition 4 --- Sound summary reuse}
@@ -424,6 +447,15 @@ Write Frame property:
   J\agree{\Field\setminus W}O.
   \tag{Write Frame}
 \]
+Sound filtering alone may return an arbitrarily coarse abstraction. Actual preservation of the
+consumer frame therefore also requires the selected consumer filter to be reductive:
+\[
+  \gamma\!\left(\filter^\sharp(\Field\setminus W,J^\sharp)\right)
+  \subseteq
+  \ProjClose\!\left(\Field\setminus W,\gamma(J^\sharp)\right).
+  \tag{Frame Filter Reductive}
+\]
+Together with Filter Sound, this makes the consumer frame filter exact for this lookup.
 The abstract domain also provides a meet operation:
 \[
   \sqcap^\sharp:\mathbb D^\sharp\times\mathbb D^\sharp\to\mathbb D^\sharp
@@ -442,6 +474,8 @@ Together, these properties make the meet represent the intersection of the two c
 exactly. When lookup succeeds, frame-preserving reuse intersects the stored output with the
 consumer information on fields outside \(W\):
 \[
+  \frameReuse^\sharp:\mathbb D^\sharp\rightharpoonup\mathbb D^\sharp,
+  \qquad
   \frameReuse^\sharp(J^\sharp)
   =O_c^\sharp\sqcap^\sharp
     \filter^\sharp(\Field\setminus W,J^\sharp).
@@ -449,14 +483,18 @@ consumer information on fields outside \(W\):
 \]
 
 \begin{statementbox}
-\boxheading{Proposition 5 --- Sound and precise frame-preserving reuse}
-When lookup succeeds, frame-preserving reuse is sound and at least as precise as coarse reuse:
+\boxheading{Proposition 5 --- Sound, precise, and frame-preserving reuse}
+When lookup succeeds, frame-preserving reuse is sound, at least as precise as coarse reuse, and
+respects the consumer frame:
 \begin{align*}
   &\text{Sound:}
   &&\SoundReuse\!\left(J^\sharp,\frameReuse^\sharp(J^\sharp)\right),\\
   &\text{Precise:}
   &&\gamma\!\left(\frameReuse^\sharp(J^\sharp)\right)
-    \subseteq\gamma\!\left(\reuse^\sharp(J^\sharp)\right).
+    \subseteq\gamma\!\left(\reuse^\sharp(J^\sharp)\right),\\
+  &\text{Frame:}
+  &&\gamma\!\left(\frameReuse^\sharp(J^\sharp)\right)
+    \subseteq\ProjClose\!\left(\Field\setminus W,\gamma(J^\sharp)\right).
 \end{align*}
 \end{statementbox}
 
@@ -483,5 +521,20 @@ Meet Reductive and Coarse Reuse give
   =\gamma\!\left(\reuse^\sharp(J^\sharp)\right).
 \]
 Therefore, frame-preserving reuse admits no more concrete states than coarse reuse. \qedbox
+
+\textbf{Proof of Frame.}
+Meet Reductive gives
+\[
+  \gamma\!\left(\frameReuse^\sharp(J^\sharp)\right)
+  \subseteq
+  \gamma\!\left(\filter^\sharp(\Field\setminus W,J^\sharp)\right).
+\]
+Frame Filter Reductive then gives
+\[
+  \gamma\!\left(\frameReuse^\sharp(J^\sharp)\right)
+  \subseteq
+  \ProjClose\!\left(\Field\setminus W,\gamma(J^\sharp)\right).
+\]
+Thus the result retains the consumer information outside the write set. \qedbox
 
 \end{document}

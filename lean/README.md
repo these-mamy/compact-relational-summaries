@@ -17,7 +17,10 @@ The formalization is deliberately generic:
 - the concrete semantics is an arbitrary transition relation;
 - the abstract domain is an arbitrary type with a concretization function;
 - `analyze`, `relate`, and `filter` are arbitrary operations constrained by the
-  semantic properties stated in the note.
+  semantic properties stated in the note;
+- Separation is an explicit diagnostic predicate, independent of P1--P5;
+- `ProductionInput` and the match-based reuse theorem expose the weaker
+  semantic contracts used inside the exact-filter and equality-key routes.
 
 The reuse theorems take successful lookup as a hypothesis, corresponding to the
 accepted branch of the paper's partial reuse operations.
@@ -25,6 +28,8 @@ accepted branch of the paper's partial reuse operations.
 Frame-preserving reuse combines the stored output with the consumer filtered
 to fields outside the write set. Its soundness uses Write Frame, Filter Sound,
 and Meet Sound. Its precision relative to coarse reuse uses Meet Reductive.
+Actual preservation of the consumer frame additionally uses
+`FrameFilterReductive` and the filter side of Meet Reductive.
 
 The core file begins with `prelude`, defines a powerset as `α → Prop`, and has
 no imports. The standard-API file imports the logical `Set` API from Mathlib.
