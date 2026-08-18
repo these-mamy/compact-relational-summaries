@@ -249,7 +249,8 @@ We assume that the read and write sets satisfy the following semantic property:
 
 \begin{statementbox}
 \boxheading{Proposition 1 --- Replay set correctness}
-Every \(A\) that satisfies Replay Closure also satisfies
+Under Replay Closure, fixing the fields in \(A\) is enough to determine the possible outputs on
+\(A\cup W\):
 \[
   \SemanticExpand(A;A\cup W,\gamma(I^\sharp)).
 \]
@@ -280,11 +281,23 @@ Filter Sound requires the filtered state to safely cover the retained informatio
 requires it to represent that information exactly when the selected fields already contain all
 their relational dependencies.
 
-\clearpage
+The following equation expresses when an abstract state separates exactly across a field set
+\(A\) and its complement:
+\[
+  \gamma(S^\sharp)
+  =
+  \ProjClose\!\left(A,\gamma(S^\sharp)\right)
+  \cap
+  \ProjClose\!\left(\Field\setminus A,\gamma(S^\sharp)\right).
+  \tag{Separation}
+\]
+When this equation holds, the information represented by \(S^\sharp\) contains no relation
+crossing between \(A\) and its complement. It gives the semantic intuition behind relation
+closure.
 
 \begin{statementbox}
 \boxheading{Proposition 2 --- Exact filtering of the producer input}
-For every replay set \(A\) satisfying Replay Closure,
+Under Replay Closure, filtering the producer input to \(A\) is exact:
 \[
   \ExactFilter\!\left(A,I^\sharp,\filter^\sharp(A,I^\sharp)\right).
 \]
@@ -327,7 +340,7 @@ and store the summary
 
 \begin{statementbox}
 \boxheading{Proposition 3 --- Summary soundness}
-The produced summary satisfies
+The stored output safely covers the possible outputs from the stored input:
 \[
   \CollectingSemantics{s}\!\left(\gamma(I_c^\sharp)\right)
   \subseteq\gamma(O_c^\sharp).
@@ -382,7 +395,7 @@ Indeed, \(\gamma(J^\sharp)\subseteq
 
 \begin{statementbox}
 \boxheading{Proposition 4 --- Sound summary reuse}
-Every accepted coarse reuse satisfies its semantic specification:
+A successful coarse reuse safely covers consumer outputs:
 \[
   \Lookup(J^\sharp)
   \quad\Longrightarrow\quad
@@ -437,7 +450,7 @@ consumer information on fields outside \(W\):
 
 \begin{statementbox}
 \boxheading{Proposition 5 --- Sound and precise frame-preserving reuse}
-Every accepted frame-preserving reuse satisfies both claims:
+When lookup succeeds, frame-preserving reuse is sound and at least as precise as coarse reuse:
 \begin{align*}
   &\text{Sound:}
   &&\SoundReuse\!\left(J^\sharp,\frameReuse^\sharp(J^\sharp)\right),\\
