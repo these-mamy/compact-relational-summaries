@@ -1,3 +1,7 @@
+% Self-contained review snapshot for PR #1 against main (83a0305).
+% Rebuild with: ./doc/review/build.sh
+% Blue marks PR additions, red marks text removed from main, and pink marks
+% revisions made from PDF review comments.
 \documentclass[10pt]{article}
 
 \usepackage[a4paper,left=25mm,right=25mm,top=22mm,bottom=22mm,headheight=14pt,headsep=7mm,footskip=11mm]{geometry}
@@ -12,6 +16,8 @@
 \definecolor{proofred}{HTML}{7A1825}
 \definecolor{proofgray}{HTML}{F4F3F3}
 \definecolor{muted}{HTML}{666666}
+\definecolor{reviewpink}{HTML}{C21875}
+\newcommand{\REV}[1]{{\color{reviewpink}#1}}
 \usepackage{microtype}
 \usepackage{enumitem}
 \usepackage{titlesec}
@@ -79,6 +85,46 @@
 \newcommand{\SoundReuse}{\mathsf{sound\ reuse}}
 \newcommand{\agree}[1]{\mathrel{\equiv_{#1}}}
 \newcommand{\qedbox}{\hfill\raisebox{0.15ex}{\fboxsep=0pt\fbox{\rule{0pt}{0.55em}\rule{0.55em}{0pt}}}}
+%DIF PREAMBLE EXTENSION ADDED BY LATEXDIFF
+%DIF CFONT PREAMBLE %DIF PREAMBLE
+\RequirePackage{color}\definecolor{RED}{rgb}{1,0,0}\definecolor{BLUE}{rgb}{0,0,1} %DIF PREAMBLE
+\DeclareOldFontCommand{\sf}{\normalfont\sffamily}{\mathsf} %DIF PREAMBLE
+\providecommand{\DIFaddtex}[1]{{\protect\color{blue} #1}} %DIF PREAMBLE
+\providecommand{\DIFdeltex}[1]{{\protect\color{red} \scriptsize #1}} %DIF PREAMBLE
+%DIF SAFE PREAMBLE %DIF PREAMBLE
+\providecommand{\DIFaddbegin}{} %DIF PREAMBLE
+\providecommand{\DIFaddend}{} %DIF PREAMBLE
+\providecommand{\DIFdelbegin}{} %DIF PREAMBLE
+\providecommand{\DIFdelend}{} %DIF PREAMBLE
+\providecommand{\DIFmodbegin}{} %DIF PREAMBLE
+\providecommand{\DIFmodend}{} %DIF PREAMBLE
+%DIF FLOATSAFE PREAMBLE %DIF PREAMBLE
+\providecommand{\DIFaddFL}[1]{\DIFadd{#1}} %DIF PREAMBLE
+\providecommand{\DIFdelFL}[1]{\DIFdel{#1}} %DIF PREAMBLE
+\providecommand{\DIFaddbeginFL}{} %DIF PREAMBLE
+\providecommand{\DIFaddendFL}{} %DIF PREAMBLE
+\providecommand{\DIFdelbeginFL}{} %DIF PREAMBLE
+\providecommand{\DIFdelendFL}{} %DIF PREAMBLE
+%DIF HYPERREF PREAMBLE %DIF PREAMBLE
+\providecommand{\DIFadd}[1]{\texorpdfstring{\DIFaddtex{#1}}{#1}} %DIF PREAMBLE
+\providecommand{\DIFdel}[1]{\texorpdfstring{\DIFdeltex{#1}}{}} %DIF PREAMBLE
+%DIF COLORLISTINGS PREAMBLE %DIF PREAMBLE
+\RequirePackage{listings} %DIF PREAMBLE
+\RequirePackage{color} %DIF PREAMBLE
+\lstdefinelanguage{DIFcode}{ %DIF PREAMBLE
+%DIF DIFCODE_CFONT %DIF PREAMBLE
+  moredelim=[il][\color{red}\scriptsize]{\%DIF\ <\ }, %DIF PREAMBLE
+  moredelim=[il][\color{blue}\sffamily]{\%DIF\ >\ } %DIF PREAMBLE
+} %DIF PREAMBLE
+\lstdefinestyle{DIFverbatimstyle}{ %DIF PREAMBLE
+	language=DIFcode, %DIF PREAMBLE
+	basicstyle=\ttfamily, %DIF PREAMBLE
+	columns=fullflexible, %DIF PREAMBLE
+	keepspaces=true %DIF PREAMBLE
+} %DIF PREAMBLE
+\lstnewenvironment{DIFverbatim}{\lstset{style=DIFverbatimstyle}}{} %DIF PREAMBLE
+\lstnewenvironment{DIFverbatim*}{\lstset{style=DIFverbatimstyle,showspaces=true}}{} %DIF PREAMBLE
+%DIF END PREAMBLE EXTENSION ADDED BY LATEXDIFF
 
 \begin{document}
 
@@ -91,6 +137,9 @@ Sound Constructions for Summary Reuse\par}
 {\color{muted}\large Replay sets, exact filtering, summary production, and sound reuse\par}
 \vspace{4mm}
 {\color{proofred}\rule{\textwidth}{1pt}\par}
+{\small\textcolor{blue}{Blue: PR additions}\quad
+ \textcolor{red}{Red: text removed from main}\quad
+ \textcolor{reviewpink}{Pink: revisions from review comments}\par}
 
 \section{Setting and terminology}
 
@@ -125,8 +174,8 @@ input agree on the replay set \(A\). When lookup succeeds, \emph{replay}, also c
 \emph{reuse}, uses the stored summary result instead of reanalyzing \(s\) for the consumer.
 \emph{Coarse reuse} returns only \(O_c^\sharp\). Consequently, coarse reuse does not retain
 information from the consumer input \(J^\sharp\), including information about fields outside
-\(A\cup W\). Under the additional reductivity assumption in Section~7,
-\emph{frame-preserving reuse} retains the consumer's information about fields outside the
+\(A\cup W\). \DIFdelbegin \DIFdel{By contrast, \emph{frame-preserving reuse} also retains }\DIFdelend \DIFaddbegin \DIFadd{\REV{Under the additional reductivity assumption in Section~7,}
+\emph{frame-preserving reuse} \REV{retains} }\DIFaddend the consumer's information about fields outside the
 write set \(W\).
 
 Reuse is sound only when it preserves the input fields in the replay set \(A\). A sound
@@ -134,11 +183,12 @@ Reuse is sound only when it preserves the input fields in the replay set \(A\). 
 depend on; a sound write set \(W\) contains every field that \(s\) may modify.
 The operation \(\relate^\sharp\) adds any field that must be retained together with the selected
 fields to preserve a relation represented in the abstract state. The operation \(\filter^\sharp\)
-returns an abstraction that is sound for the selected fields; when filtering is exact, it retains
-exactly that information and discards information about all other fields. Their types and the
-semantic properties they must satisfy are specified below. Every state component that can affect
+\DIFdelbegin \DIFdel{retains information about }\DIFdelend \DIFaddbegin \DIFadd{returns an abstraction that is sound for }\DIFaddend the selected fields\DIFaddbegin \DIFadd{; when filtering is exact, it retains
+exactly that information }\DIFaddend and discards information about all other fields. Their types and the
+semantic properties they must satisfy are specified below. \DIFaddbegin \DIFadd{Every state component that can affect
 the semantics must either be represented by \(\Field\) or held fixed by the statement and cache
-key, as required by the expansion and frame assumptions below.
+key, \REV{as required by the expansion and frame assumptions below.}
+}\DIFaddend
 
 For \(A\subseteq\Field\), write \(I\agree{A}J\) when the concrete states \(I\) and \(J\)
 agree on every field in \(A\). The agreement closure maps a set of fields and a set of concrete
@@ -227,12 +277,14 @@ A replay set \(A\) must satisfy the following \emph{Replay Closure} conditions:
   \tag{Replay Closure}
 \]
 The first condition retains every field that \(s\) may read. The second retains every field
-needed to preserve relations including the fields already selected. The conditions have distinct
+needed to preserve relations including the fields already selected. \DIFdelbegin \DIFdel{Together, they ensure that
+retaining the fields in \(A\) is enough to reproduce the possible outputs of }\DIFdelend \DIFaddbegin \DIFadd{The conditions have distinct
 roles: \(R\subseteq A\), together with Read/Write Expansion, establishes semantic sufficiency for
-executing \(s\); closure under \(\relate^\sharp\), together with Closed Exact, establishes exact
-filtering of the producer state.
+executing }\DIFaddend \(s\)\DIFdelbegin \DIFdel{on \(A\cup W\), and let us obtain an exact
+projection of the relational }\DIFdelend \DIFaddbegin \DIFadd{; closure under \(\relate^\sharp\), together with Closed Exact, establishes exact
+filtering of the }\DIFaddend producer state.
 
-To construct a smaller replay set when the reachable field universe has finite height, start from
+To construct a smaller replay set when \DIFdelbegin \DIFdel{only finitely many fields can be added}\DIFdelend \DIFaddbegin \DIFadd{the reachable field universe has finite height}\DIFaddend , start from
 the read set and repeatedly add relational dependencies:
 \[
   A_0=R,
@@ -243,7 +295,7 @@ until the sequence stabilizes. The result satisfies Replay Closure. A replay set
 because \(A=\Field\) satisfies the two closure conditions. The proofs below require only
 Replay Closure, not termination or leastness.
 
-We assume that the read and write sets satisfy the following semantic property:
+\REV{We assume that the read and write sets satisfy the following semantic property:}
 \[
   R\subseteq A
   \quad\Longrightarrow\quad
@@ -312,15 +364,20 @@ Under Replay Closure, filtering the producer input to \(A\) is exact:
 Replay Closure gives \(\relate^\sharp(A,I^\sharp)\subseteq A\); Closed Exact gives the
 conclusion. \qedbox
 
-The stored-input condition needed for Summary Sound is the following upper bound:
-\[
-  \gamma(I_c^\sharp)
+\DIFdelbegin \DIFdel{Production analyzes \(I^\sharp\) before filtering it. Therefore,
+\(\filter^\sharp(A,I^\sharp)\) must represent \(\ProjClose(A,\gamma(I^\sharp))\) exactly,
+and this agreement closure must be representable in \(\mathbb D^\sharp\). By contrast, sound
+filtering suffices for the stored output and lookup.
+}\DIFdelend \DIFaddbegin \DIFadd{\REV{The stored-input condition needed for Summary Sound is the following upper bound:}
+}\[
+  \DIFadd{\gamma(I_c^\sharp)
   \subseteq
   \ProjClose\!\left(A,\gamma(I^\sharp)\right).
   \tag{Production Input}
-\]
-Exact producer filtering satisfies Production Input by Proposition~2. A producer may instead
-establish Production Input directly.
+}\]
+\DIFadd{\REV{Exact producer filtering satisfies Production Input by Proposition~2. A producer may instead
+establish Production Input directly.}
+}\DIFaddend
 
 \section{Summary production}
 
@@ -402,9 +459,10 @@ Filter Sound ensures that every successful lookup satisfies the following inclus
 Indeed, \(\gamma(J^\sharp)\subseteq
 \ProjClose(A,\gamma(J^\sharp))\subseteq
 \gamma(\filter^\sharp(A,J^\sharp))=\gamma(I_c^\sharp)\).
-Filtered-key equality is sufficient for Match Sound. With noncanonical abstract representations,
+\DIFaddbegin \DIFadd{\REV{Filtered-key equality is sufficient for Match Sound. With noncanonical abstract representations,
 it may reject a semantically valid match. Such rejection reduces reuse opportunities but preserves
-soundness.
+soundness.}
+}\DIFaddend
 
 \begin{statementbox}
 \boxheading{Proposition 4 --- Sound summary reuse}
@@ -437,15 +495,15 @@ Write Frame property:
   J\agree{\Field\setminus W}O.
   \tag{Write Frame}
 \]
-Frame preservation requires the consumer filter to be reductive:
-\[
-  \gamma\!\left(\filter^\sharp(\Field\setminus W,J^\sharp)\right)
+\DIFaddbegin \DIFadd{\REV{Frame preservation requires the consumer filter to be reductive:}
+}\[
+  \DIFadd{\gamma\!\left(\filter^\sharp(\Field\setminus W,J^\sharp)\right)
   \subseteq
   \ProjClose\!\left(\Field\setminus W,\gamma(J^\sharp)\right).
   \tag{Frame Filter Reductive}
-\]
-Combined with Filter Sound, Frame Filter Reductive makes this filter exact.
-The abstract domain also provides a meet operation:
+}\]
+\DIFadd{\REV{Combined with Filter Sound, Frame Filter Reductive makes this filter exact.}
+}\DIFaddend The abstract domain also provides a meet operation:
 \[
   \sqcap^\sharp:\mathbb D^\sharp\times\mathbb D^\sharp\to\mathbb D^\sharp
 \]
@@ -459,30 +517,35 @@ It must satisfy two separate properties:
   &&\tag{Meet Reductive}
 \end{align*}
 
-When lookup succeeds, frame-preserving reuse meets the stored output with the consumer input
-filtered to \(\Field\setminus W\):
-\[
-  \frameReuse^\sharp:\mathbb D^\sharp\rightharpoonup\mathbb D^\sharp,
+\DIFdelbegin \DIFdel{Together, these properties make the meet represent the intersection of the two concretizations
+exactly. When lookup succeeds, frame-preserving reuse intersects the stored output with the
+consumer information on fields outside \(W\):
+}\DIFdelend \DIFaddbegin \DIFadd{\REV{When lookup succeeds, frame-preserving reuse meets the stored output with the consumer input
+filtered to \(\Field\setminus W\):}
+}\DIFaddend \[
+  \frameReuse^\sharp\DIFaddbegin \DIFadd{:\mathbb D^\sharp\rightharpoonup\mathbb D^\sharp,
   \qquad
-  \frameReuse^\sharp(J^\sharp)
+  \frameReuse^\sharp}\DIFaddend (J^\sharp)
   =O_c^\sharp\sqcap^\sharp
     \filter^\sharp(\Field\setminus W,J^\sharp).
   \tag{Frame-Preserving Reuse}
 \]
 
 \begin{statementbox}
-\boxheading{Proposition 5 --- Sound, precise, and frame-preserving reuse}
-When lookup succeeds, frame-preserving reuse is sound, at least as precise as coarse reuse, and
+\DIFdelbegin \DIFdel{\boxheading{Proposition 5 --- Sound and precise frame-preserving reuse}
+}\DIFdelend \DIFaddbegin \DIFadd{\boxheading{Proposition 5 --- Sound, precise, and frame-preserving reuse}
+}\DIFaddend When lookup succeeds, frame-preserving reuse is sound\DIFdelbegin \DIFdel{and }\DIFdelend \DIFaddbegin \DIFadd{, }\DIFaddend at least as precise as coarse reuse\DIFdelbegin \DIFdel{:
+}\DIFdelend \DIFaddbegin \DIFadd{, and
 respects the consumer frame:
-\begin{align*}
+}\DIFaddend \begin{align*}
   &\text{Sound:}
   &&\SoundReuse\!\left(J^\sharp,\frameReuse^\sharp(J^\sharp)\right),\\
   &\text{Precise:}
   &&\gamma\!\left(\frameReuse^\sharp(J^\sharp)\right)
-    \subseteq\gamma\!\left(\reuse^\sharp(J^\sharp)\right),\\
-  &\text{Frame:}
-  &&\gamma\!\left(\frameReuse^\sharp(J^\sharp)\right)
-    \subseteq\ProjClose\!\left(\Field\setminus W,\gamma(J^\sharp)\right).
+    \subseteq\gamma\!\left(\reuse^\sharp(J^\sharp)\right)\DIFaddbegin \DIFadd{,}\\
+  &\DIFadd{\text{Frame:}
+  }&&\DIFadd{\gamma\!}\left(\DIFadd{\frameReuse^\sharp(J^\sharp)}\right)
+    \DIFadd{\subseteq\ProjClose\!}\left(\DIFadd{\Field\setminus W,\gamma(J^\sharp)}\right)\DIFaddend .
 \end{align*}
 \end{statementbox}
 
@@ -508,17 +571,17 @@ Meet Reductive and Coarse Reuse give
   \subseteq\gamma(O_c^\sharp)
   =\gamma\!\left(\reuse^\sharp(J^\sharp)\right).
 \]
-Therefore, frame-preserving reuse admits no more concrete states than coarse reuse. \qedbox
+Therefore, frame-preserving reuse admits no more concrete states than coarse reuse. \DIFaddbegin \qedbox
 
-\textbf{Proof of Frame.}
-Meet Reductive and Frame Filter Reductive give
-\[
-  \gamma\!\left(\frameReuse^\sharp(J^\sharp)\right)
+\DIFadd{\textbf{Proof of Frame.}
+\REV{Meet Reductive and Frame Filter Reductive give}
+}\[
+  \DIFadd{\gamma\!\left(\frameReuse^\sharp(J^\sharp)\right)
   \subseteq
   \gamma\!\left(\filter^\sharp(\Field\setminus W,J^\sharp)\right)
   \subseteq
   \ProjClose\!\left(\Field\setminus W,\gamma(J^\sharp)\right).
-\]
-This is the Frame conclusion. \qedbox
+}\]
+\DIFadd{\REV{This is the Frame conclusion.} }\DIFaddend \qedbox
 
 \end{document}

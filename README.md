@@ -10,7 +10,7 @@ The proof develops five propositions:
 2. exact filtering of the producer input;
 3. summary soundness;
 4. sound coarse reuse;
-5. sound and precise frame-preserving reuse.
+5. sound, coarse-refining, and semantically frame-preserving reuse.
 
 ## Contents
 

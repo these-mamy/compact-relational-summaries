@@ -74,6 +74,19 @@ def ExactFilter (observe : State → Field → Value)
     (gamma : Abs → Set State) (B : Set Field) (S T : Abs) : Prop :=
   gamma T = projClose observe B (gamma S)
 
+/-- The displayed Separation diagnostic.  It is independent of P1--P5. -/
+def Separation (observe : State → Field → Value)
+    (gamma : Abs → Set State) (A : Set Field) (S : Abs) : Prop :=
+  gamma S =
+    projClose observe A (gamma S) ∩
+      projClose observe (Set.univ \ A) (gamma S)
+
+/-- Weak producer-side upper bound used by Summary Sound. -/
+def ProductionInput (observe : State → Field → Value)
+    (gamma : Abs → Set State) (A : Set Field)
+    (producerInput storedInput : Abs) : Prop :=
+  gamma storedInput ⊆ projClose observe A (gamma producerInput)
+
 /-- Paper definition (SR). -/
 def SoundReuse (step : State → State → Prop) (gamma : Abs → Set State)
     (J result : Abs) : Prop :=
@@ -133,6 +146,31 @@ def AnalyzeSound (step : State → State → Prop) (gamma : Abs → Set State)
     (analyze : Abs → Abs) : Prop :=
   ∀ S, collect step (gamma S) ⊆ gamma (analyze S)
 
+/-- Summary Sound from the weakest producer-input bound used by the proof. -/
+theorem summary_soundness_from_production_input
+    (step : State → State → Prop) (observe : State → Field → Value)
+    (gamma : Abs → Set State) (filter : Set Field → Abs → Abs)
+    (analyze : Abs → Abs) (A W : Set Field)
+    (producerInput storedInput : Abs)
+    (hProductionInput :
+      ProductionInput observe gamma A producerInput storedInput)
+    (hExpand : SemanticExpand step observe (A ∪ W)
+      (gamma producerInput) A)
+    (hFilterSound : FilterSound observe gamma filter)
+    (hAnalyzeSound : AnalyzeSound step gamma analyze) :
+    collect step (gamma storedInput) ⊆
+      gamma (filter (A ∪ W) (analyze producerInput)) := by
+  intro o ho
+  have ho₀ : o ∈ collect step (projClose observe A (gamma producerInput)) :=
+    collect_mono step hProductionInput ho
+  have ho₁ : o ∈ projClose observe (A ∪ W)
+      (collect step (gamma producerInput)) :=
+    hExpand ho₀
+  have ho₂ : o ∈ projClose observe (A ∪ W)
+      (gamma (analyze producerInput)) :=
+    projClose_mono observe (hAnalyzeSound producerInput) ho₁
+  exact hFilterSound (A ∪ W) (analyze producerInput) ho₂
+
 /-- Proposition 3: Summary soundness.
 
 Here `filter A I` is the stored input and
@@ -153,17 +191,17 @@ theorem summary_soundness
   have hExact : gamma (filter A I) = projClose observe A (gamma I) :=
     exact_filtering_of_producer_input observe gamma relate filter R A I
       hClosure hClosedExact
+  have hProductionInput : ProductionInput observe gamma A I (filter A I) := by
+    intro x hx
+    rw [hExact] at hx
+    exact hx
   have hExpand :
       collect step (projClose observe A (gamma I)) ⊆
         projClose observe (A ∪ W) (collect step (gamma I)) :=
     replay_set_correctness step observe gamma relate R W A I hRW hClosure
-  intro o ho
-  rw [hExact] at ho
-  have ho₁ : o ∈ projClose observe (A ∪ W) (collect step (gamma I)) :=
-    hExpand ho
-  have ho₂ : o ∈ projClose observe (A ∪ W) (gamma (analyze I)) :=
-    projClose_mono observe (hAnalyzeSound I) ho₁
-  exact hFilterSound (A ∪ W) (analyze I) ho₂
+  exact summary_soundness_from_production_input step observe gamma filter
+    analyze A W I (filter A I) hProductionInput hExpand hFilterSound
+    hAnalyzeSound
 
 /-! ## Lookup and coarse reuse -/
 
@@ -190,6 +228,16 @@ theorem match_sound
   rw [hLookup] at hiFiltered
   exact hiFiltered
 
+/-- Coarse reuse needs only the semantic Match Sound inclusion. -/
+theorem sound_summary_reuse_from_match
+    (step : State → State → Prop) (gamma : Abs → Set State)
+    (storedInput storedOutput consumerInput : Abs)
+    (hMatch : gamma consumerInput ⊆ gamma storedInput)
+    (hSummarySound : collect step (gamma storedInput) ⊆ gamma storedOutput) :
+    SoundReuse step gamma consumerInput (coarseReuse storedOutput) := by
+  intro o ho
+  exact hSummarySound (collect_mono step hMatch ho)
+
 /-- Proposition 4: Sound summary reuse, given Summary Sound. -/
 theorem sound_summary_reuse
     (step : State → State → Prop) (observe : State → Field → Value)
@@ -200,12 +248,11 @@ theorem sound_summary_reuse
     (hLookup : Lookup filter A storedInput consumerInput) :
     SoundReuse step gamma consumerInput
       (coarseReuse storedOutput) := by
-  intro o ho
-  apply hSummarySound
-  apply collect_mono step
+  exact sound_summary_reuse_from_match step gamma storedInput storedOutput
+    consumerInput
     (match_sound observe gamma filter A storedInput consumerInput
       hFilterSound hLookup)
-  exact ho
+    hSummarySound
 
 /-! ## Frame-preserving reuse -/
 
@@ -213,6 +260,13 @@ theorem sound_summary_reuse
 def WriteFrame (step : State → State → Prop)
     (observe : State → Field → Value) (W : Set Field) : Prop :=
   ∀ i o, step i o → Agree observe (Set.univ \ W) i o
+
+/-- The selected consumer-frame filter admits no state beyond its closure. -/
+def FrameFilterReductive (observe : State → Field → Value)
+    (gamma : Abs → Set State) (filter : Set Field → Abs → Abs)
+    (W : Set Field) (consumerInput : Abs) : Prop :=
+  gamma (filter (Set.univ \ W) consumerInput) ⊆
+    projClose observe (Set.univ \ W) (gamma consumerInput)
 
 /-- The abstract combination contains the concrete intersection. -/
 def MeetSound (gamma : Abs → Set State) (meet : Abs → Abs → Abs) : Prop :=
@@ -229,8 +283,8 @@ def framePreservingReuse
     (W : Set Field) (storedOutput consumerInput : Abs) : Abs :=
   meet storedOutput (filter (Set.univ \ W) consumerInput)
 
-/-- Proposition 5: accepted frame-preserving reuse is sound and is at least as
-precise as accepted coarse reuse. -/
+/-- Proposition 5: accepted frame-preserving reuse is sound, refines coarse
+reuse, and satisfies the concrete consumer-frame constraint. -/
 theorem sound_and_precise_frame_preserving_reuse
     (step : State → State → Prop) (observe : State → Field → Value)
     (gamma : Abs → Set State) (filter : Set Field → Abs → Abs)
@@ -239,12 +293,16 @@ theorem sound_and_precise_frame_preserving_reuse
     (hFilterSound : FilterSound observe gamma filter)
     (hCoarseSound : SoundReuse step gamma consumerInput storedOutput)
     (hWriteFrame : WriteFrame step observe W)
+    (hFrameFilterReductive :
+      FrameFilterReductive observe gamma filter W consumerInput)
     (hMeetSound : MeetSound gamma meet)
     (hMeetReductive : MeetReductive gamma meet) :
     SoundReuse step gamma consumerInput
         (framePreservingReuse meet filter W storedOutput consumerInput) ∧
       gamma (framePreservingReuse meet filter W storedOutput consumerInput) ⊆
-        gamma (coarseReuse storedOutput) := by
+        gamma (coarseReuse storedOutput) ∧
+      gamma (framePreservingReuse meet filter W storedOutput consumerInput) ⊆
+        projClose observe (Set.univ \ W) (gamma consumerInput) := by
   constructor
   · intro o ho
     have hoStored : o ∈ gamma storedOutput := hCoarseSound ho
@@ -255,9 +313,14 @@ theorem sound_and_precise_frame_preserving_reuse
         ⟨i, hi, hWriteFrame i o hstep⟩
     exact hMeetSound storedOutput
       (filter (Set.univ \ W) consumerInput) ⟨hoStored, hoFrame⟩
-  · intro x hx
-    exact (hMeetReductive storedOutput
-      (filter (Set.univ \ W) consumerInput) hx).1
+  · constructor
+    · intro x hx
+      exact (hMeetReductive storedOutput
+        (filter (Set.univ \ W) consumerInput) hx).1
+    · intro x hx
+      exact hFrameFilterReductive
+        (hMeetReductive storedOutput
+          (filter (Set.univ \ W) consumerInput) hx).2
 
 /-- End-to-end form of the final theorem.  It discharges Summary Sound with
 Propositions 1--3 and then applies Proposition 4. -/
@@ -294,6 +357,8 @@ theorem end_to_end_sound_frame_preserving_reuse
     (hFilterSound : FilterSound observe gamma filter)
     (hAnalyzeSound : AnalyzeSound step gamma analyze)
     (hWriteFrame : WriteFrame step observe W)
+    (hFrameFilterReductive :
+      FrameFilterReductive observe gamma filter W consumerInput)
     (hMeetSound : MeetSound gamma meet)
     (hMeetReductive : MeetReductive gamma meet)
     (hLookup : Lookup filter A (filter A producerInput) consumerInput) :
@@ -302,7 +367,10 @@ theorem end_to_end_sound_frame_preserving_reuse
           (filter (A ∪ W) (analyze producerInput)) consumerInput) ∧
       gamma (framePreservingReuse meet filter W
           (filter (A ∪ W) (analyze producerInput)) consumerInput) ⊆
-        gamma (coarseReuse (filter (A ∪ W) (analyze producerInput))) := by
+        gamma (coarseReuse (filter (A ∪ W) (analyze producerInput))) ∧
+      gamma (framePreservingReuse meet filter W
+          (filter (A ∪ W) (analyze producerInput)) consumerInput) ⊆
+        projClose observe (Set.univ \ W) (gamma consumerInput) := by
   apply sound_and_precise_frame_preserving_reuse step observe gamma filter meet
     W (filter (A ∪ W) (analyze producerInput)) consumerInput
     hFilterSound
@@ -310,6 +378,7 @@ theorem end_to_end_sound_frame_preserving_reuse
       R W A producerInput consumerInput hRW hClosure hClosedExact
       hFilterSound hAnalyzeSound hLookup
   · exact hWriteFrame
+  · exact hFrameFilterReductive
   · exact hMeetSound
   · exact hMeetReductive
 
